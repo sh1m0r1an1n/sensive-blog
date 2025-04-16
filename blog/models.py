@@ -1,7 +1,7 @@
 from django.db import models
 from django.urls import reverse
 from django.contrib.auth.models import User
-from django.db.models import Count, Prefetch
+from django.db.models import Count
 
 
 class PostQuerySet(models.QuerySet):
@@ -10,34 +10,26 @@ class PostQuerySet(models.QuerySet):
         return self.filter(published_at__year=year)
 
     def with_likes_count(self):
-        """
-        Добавляет количество лайков к каждому посту
-        """
-        return self.annotate(likes_count=Count('likes'))
+        """Добавляет количество лайков к каждому посту"""
+        return self.annotate(likes_count=Count("likes"))
 
     def with_comments_count(self):
-        """
-        Добавляет количество комментариев к каждому посту
-        """
-        return self.annotate(comments_count=Count('comments'))
+        """Добавляет количество комментариев к каждому посту"""
+        return self.annotate(comments_count=Count("comments"))
 
     def with_related(self):
-        """
-        Оптимизированная загрузка связанных данных
-        """
-        return self.prefetch_related('author', 'tags')
+        """Оптимизированная загрузка связанных данных"""
+        return self.prefetch_related("author", "tags")
 
     def popular(self):
-        """
-        Возвращает посты, отсортированные по количеству лайков
-        """
-        return self.with_likes_count().order_by('-likes_count')
+        """Возвращает посты, отсортированные по количеству лайков"""
+        return self.with_likes_count().order_by("-likes_count")
 
 
 class TagQuerySet(models.QuerySet):
     def popular(self):
         """Сортирует теги по количеству использующих их постов"""
-        return self.annotate(posts_count=Count('posts')).order_by('-posts_count')
+        return self.annotate(posts_count=Count("posts")).order_by("-posts_count")
 
 
 class Post(models.Model):
@@ -54,16 +46,9 @@ class Post(models.Model):
         limit_choices_to={"is_staff": True},
     )
     likes = models.ManyToManyField(
-        User,
-        related_name="liked_posts",
-        verbose_name="Кто лайкнул",
-        blank=True
+        User, related_name="liked_posts", verbose_name="Кто лайкнул", blank=True
     )
-    tags = models.ManyToManyField(
-        "Tag",
-        related_name="posts",
-        verbose_name="Теги"
-    )
+    tags = models.ManyToManyField("Tag", related_name="posts", verbose_name="Теги")
 
     objects = PostQuerySet.as_manager()
 
@@ -74,7 +59,7 @@ class Post(models.Model):
         return reverse("post_detail", args={"slug": self.slug})
 
     class Meta:
-        ordering = ['-published_at']
+        ordering = ["-published_at"]
         verbose_name = "пост"
         verbose_name_plural = "посты"
 
@@ -106,11 +91,7 @@ class Comment(models.Model):
         related_name="comments",
         verbose_name="Пост, к которому написан",
     )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name="Автор"
-    )
+    author = models.ForeignKey(User, on_delete=models.CASCADE, verbose_name="Автор")
 
     text = models.TextField("Текст комментария")
     published_at = models.DateTimeField("Дата и время публикации")
