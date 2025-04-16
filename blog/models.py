@@ -6,12 +6,31 @@ from django.db.models import Count
 
 class PostQuerySet(models.QuerySet):
     def year(self, year):
+        """Фильтрует посты по году публикации"""
         return self.filter(published_at__year=year)
 
     def popular(self):
+        """
+        Сортирует посты по популярности (количеству лайков)
+        Возвращает QuerySet, поэтому можно объединять с другими методами
+        """
         return self.annotate(likes_count=Count("likes")).order_by("-likes_count")
 
     def fetch_with_comments_count(self):
+        """
+        Добавляет количество комментариев к каждому посту используя один запрос к базе
+
+        Этот метод лучше чем annotate(comments_count=Count('comments')) когда:
+        1. Нужно посчитать комментарии для небольшого количества постов (например, после среза [:5])
+        2. Уже применены фильтры/срезы и не нужно создавать сложный SQL JOIN
+
+        Делает 2 простых запроса вместо 1 сложного:
+        1. Получает все ID постов
+        2. Считает комментарии только для этих постов
+
+        Возвращает список постов вместо QuerySet, потому что мы добавляем
+        атрибут comments_count напрямую к объектам постов
+        """
         posts = self.all()
         posts_ids = [post.id for post in posts]
         
@@ -30,6 +49,7 @@ class PostQuerySet(models.QuerySet):
 
 class TagQuerySet(models.QuerySet):
     def popular(self):
+        """Сортирует теги по количеству использующих их постов"""
         return self.annotate(posts_count=Count("posts")).order_by("-posts_count")
 
 
