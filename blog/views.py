@@ -79,19 +79,12 @@ def serialize_tag(tag):
 
 
 def index(request):
-    most_popular_posts = Post.objects.annotate(likes_count=Count("likes")).order_by(
-        "-likes_count"
-    )[:5]
-    most_popular_posts = get_posts_with_comments(most_popular_posts)
+    most_popular_posts = Post.objects.popular()[:5].fetch_with_comments_count()
 
-    fresh_posts = Post.objects.annotate(likes_count=Count("likes")).order_by(
-        "-published_at"
-    )[:5]
-    fresh_posts = get_posts_with_comments(fresh_posts)
+    fresh_posts = Post.objects.all().order_by("-published_at")[:5]
+    fresh_posts = fresh_posts.fetch_with_comments_count()
 
-    most_popular_tags = Tag.objects.annotate(posts_count=Count("posts")).order_by(
-        "-posts_count"
-    )[:5]
+    most_popular_tags = Tag.objects.popular()[:5]
 
     context = {
         "most_popular_posts": [serialize_post(post) for post in most_popular_posts],
@@ -128,14 +121,8 @@ def post_detail(request, slug):
         "tags": [serialize_tag(tag) for tag in post.tags.all()],
     }
 
-    most_popular_tags = Tag.objects.annotate(posts_count=Count("posts")).order_by(
-        "-posts_count"
-    )[:5]
-
-    most_popular_posts = Post.objects.annotate(likes_count=Count("likes")).order_by(
-        "-likes_count"
-    )[:5]
-    most_popular_posts = get_posts_with_comments(most_popular_posts)
+    most_popular_tags = Tag.objects.popular()[:5]
+    most_popular_posts = Post.objects.popular()[:5].fetch_with_comments_count()
 
     context = {
         "post": serialized_post,
@@ -148,21 +135,11 @@ def post_detail(request, slug):
 def tag_filter(request, tag_title):
     tag = Tag.objects.get(title=tag_title)
 
-    related_posts = (
-        Post.objects.filter(tags=tag)
-        .annotate(likes_count=Count("likes"))
-        .order_by("-published_at")[:20]
-    )
-    related_posts = get_posts_with_comments(related_posts)
+    related_posts = Post.objects.filter(tags=tag).popular()[:20]
+    related_posts = related_posts.fetch_with_comments_count()
 
-    most_popular_tags = Tag.objects.annotate(posts_count=Count("posts")).order_by(
-        "-posts_count"
-    )[:5]
-
-    most_popular_posts = Post.objects.annotate(likes_count=Count("likes")).order_by(
-        "-likes_count"
-    )[:5]
-    most_popular_posts = get_posts_with_comments(most_popular_posts)
+    most_popular_tags = Tag.objects.popular()[:5]
+    most_popular_posts = Post.objects.popular()[:5].fetch_with_comments_count()
 
     context = {
         "tag": tag.title,
