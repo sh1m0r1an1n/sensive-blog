@@ -7,10 +7,6 @@ from django.db.models.functions import Coalesce
 
 
 class PostQuerySet(models.QuerySet):
-    def year(self, year):
-        """Фильтрует посты по году публикации"""
-        return self.filter(published_at__year=year)
-
     def with_likes_count(self):
         """Добавляет поле likes_count через подзапрос без тяжёлого GROUP BY."""
         through = Post.likes.through  # таблица связи M2M
@@ -39,27 +35,6 @@ class PostQuerySet(models.QuerySet):
         return self.annotate(
             comments_count=Coalesce(Subquery(comments_subquery, output_field=IntegerField()), 0)
         )
-
-    def with_related(self):
-        """Оптимизированная загрузка связанных данных"""
-        return self.select_related("author").prefetch_related("tags")
-
-    def popular(self):
-        """Возвращает посты, отсортированные по количеству лайков"""
-        return self.with_likes_count().order_by("-likes_count")
-
-    def bulk_load_comments_count(self):
-        """Добавляет comments_count для всех постов в QuerySet"""
-        posts_ids = [post.id for post in self]
-        comments_counts = (
-            Post.objects.with_comments_count()
-            .filter(id__in=posts_ids)
-            .values_list("id", "comments_count")
-        )
-        count_dict = dict(comments_counts)
-        for post in self:
-            post.comments_count = count_dict.get(post.id, 0)
-        return self
 
 
 class TagQuerySet(models.QuerySet):
