@@ -69,12 +69,7 @@ def post_detail(request, slug: str):
             "tags",
             Prefetch(
                 "comments",
-                queryset=Comment.objects.select_related("author").only(
-                    "text",
-                    "published_at",
-                    "author__username",
-                    "author_id",
-                ),
+                queryset=Comment.objects.select_related("author"),
             ),
         )
         .with_likes_count()
